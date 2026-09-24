@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>六西格玛刷题 · 中质协题库</title>
+<script src="sixsigma-data.js"></script>
+<script src="passport-config.js"></script>
+<style>
+  :root { --primary:#00695C; --accent:#F57C00; --ok:#2E7D32; --err:#C62828; --bg:#F5F6FA; --card:#FFFFFF; --text:#212121; --muted:#757575; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:"Microsoft YaHei","PingFang SC",sans-serif; background:var(--bg); color:var(--text); max-width:520px; margin:0 auto; padding-bottom:70px; }
+  header { background:linear-gradient(135deg,#00695C,#00897B); color:#fff; padding:16px 16px 14px; position:sticky; top:0; z-index:10; }
+  header h1 { font-size:18px; font-weight:700; }
+  header .sub { font-size:12px; opacity:.8; margin-top:2px; }
+  .checkin-bar { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+  .btn-checkin { background:var(--accent); color:#fff; border:none; border-radius:20px; padding:6px 14px; font-size:13px; font-weight:700; cursor:pointer; }
+  .btn-checkin.done { background:#9E9E9E; }
+  .belt-bar { display:flex; gap:8px; margin-top:10px; }
+  .belt-bar button { flex:1; padding:9px 0; border:none; border-radius:10px; background:rgba(255,255,255,.14); color:#fff; font-size:14px; font-weight:700; cursor:pointer; }
+  .belt-bar button.active { background:#fff; color:var(--primary); }
+  nav { display:flex; background:#fff; border-bottom:1px solid #E0E0E0; position:sticky; top:118px; z-index:9; }
+  nav button { flex:1; padding:12px 0; border:none; background:none; font-size:14px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
+  nav button.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:700; }
+  main { padding:14px 14px 0; }
+  .card { background:var(--card); border-radius:12px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:14px; }
+  .chapter-select { width:100%; padding:10px; border:1px solid #DDD; border-radius:8px; font-size:14px; background:#fff; }
+  .mode-row { display:flex; gap:8px; margin-top:10px; }
+  .mode-row button { flex:1; padding:10px; border:1px solid #DDD; border-radius:8px; background:#fff; font-size:13px; cursor:pointer; }
+  .mode-row button.active { border-color:var(--primary); color:var(--primary); background:#E0F2F1; font-weight:700; }
+  .q-tag { font-size:12px; color:var(--muted); margin-bottom:6px; display:flex; justify-content:space-between; }
+  .q-text { font-size:16px; line-height:1.7; margin-bottom:14px; font-weight:700; }
+  .option { display:block; width:100%; text-align:left; padding:12px; margin-bottom:8px; border:1.5px solid #DDD; border-radius:8px; background:#fff; font-size:15px; line-height:1.5; cursor:pointer; }
+  .option.correct { border-color:var(--ok); background:#E8F5E9; color:var(--ok); font-weight:700; }
+  .option.wrong { border-color:var(--err); background:#FFEBEE; color:var(--err); font-weight:700; }
+  .option.picked { border-color:var(--accent); background:#FFF3E0; font-weight:700; }
+  .option:disabled { cursor:default; }
+  .type-tag { display:inline-block; font-size:11px; padding:1px 8px; border-radius:10px; background:#E0F2F1; color:var(--primary); margin-right:6px; font-weight:600; }
+  .analysis { display:none; background:#FFF8E1; border-left:4px solid var(--accent); border-radius:0 8px 8px 0; padding:12px; margin-top:10px; font-size:14px; line-height:1.7; }
+  .analysis.show { display:block; }
+  #analysisText { white-space:pre-wrap; line-height:1.8; }
+  .analysis .src { color:var(--muted); font-size:12px; margin-top:6px; }
+  .action-row { display:flex; gap:8px; margin-top:12px; }
+  .action-row button { flex:1; padding:11px; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; }
+  .btn-primary { background:var(--primary); color:#fff; }
+  .btn-plain { background:#EEE; color:var(--text); }
+  .empty { text-align:center; color:var(--muted); padding:40px 0; font-size:14px; }
+  .stat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .stat { background:var(--card); border-radius:12px; padding:16px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .stat .num { font-size:26px; font-weight:800; color:var(--primary); }
+  .stat .label { font-size:12px; color:var(--muted); margin-top:4px; }
+  .week { display:flex; justify-content:space-between; margin-top:14px; }
+  .week .day { width:13%; text-align:center; }
+  .week .dot { width:28px; height:28px; line-height:28px; border-radius:50%; margin:4px auto; font-size:11px; background:#EEEEEE; color:var(--muted); }
+  .week .dot.on { background:var(--accent); color:#fff; font-weight:700; }
+  .week .w-name { font-size:11px; color:var(--muted); }
+  .wrong-item { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #F0F0F0; font-size:14px; }
+  .wrong-item button { border:none; background:var(--primary); color:#fff; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer; }
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; padding:9px 18px; border-radius:20px; font-size:13px; z-index:99; opacity:0; transition:opacity .3s; pointer-events:none; }
+  /* ===== 群免费解锁 ===== */
+  .unlock-bar { display:flex; justify-content:space-between; align-items:center; margin-top:8px; background:rgba(255,255,255,.14); border-radius:20px; padding:5px 6px 5px 12px; font-size:12px; }
+  .unlock-bar .u-txt { opacity:.95; }
+  .unlock-bar .btn-unlock { background:#fff; color:var(--primary); border:none; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:700; cursor:pointer; }
+  .unlock-bar .btn-unlock.free { background:var(--accent); color:#fff; }
+  .mask { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:80; display:none; align-items:center; justify-content:center; padding:20px; }
+  .mask.show { display:flex; }
+  .unlock-modal { background:#fff; border-radius:16px; width:100%; max-width:400px; padding:22px 20px 16px; box-shadow:0 8px 30px rgba(0,0,0,.2); }
+  .unlock-modal h3 { font-size:17px; margin-bottom:8px; color:var(--primary); }
+  .unlock-modal .u-desc { font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:14px; }
+  .unlock-input { width:100%; padding:12px; border:1.5px solid #DDD; border-radius:10px; font-size:15px; letter-spacing:1px; margin-bottom:10px; box-sizing:border-box; }
+  .unlock-input:focus { outline:none; border-color:var(--primary); }
+  .unlock-msg { font-size:12px; min-height:20px; margin-bottom:8px; color:var(--muted); }
+  .unlock-msg.err { color:var(--err); }
+  .unlock-msg.ok { color:var(--ok); font-weight:700; }
+  .u-btn { width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; }
+  .u-btn.primary { background:var(--primary); color:#fff; }
+  .u-btn.ghost { background:#EEE; color:var(--text); margin-top:8px; }
+  .unlock-state { background:#E8F5E9; border-radius:10px; padding:10px 12px; font-size:13px; color:var(--ok); margin-bottom:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>六西格玛刷题题库</h1>
+  <div class="sub" id="bankInfo">建设中…</div>
+  <div class="checkin-bar">
+    <span id="streakText" style="font-size:12px;opacity:.9;">连续打卡 0 天</span>
+    <button class="btn-checkin" id="btnCheckin" onclick="doCheckin()">今日打卡</button>
+  </div>
+  <div class="unlock-bar" id="unlockBar">
+    <span class="u-txt" id="unlockTxt">体验模式 · 今日可答 15 题</span>
+    <button class="btn-unlock" id="btnUnlock" onclick="openUnlock()">免费解锁</button>
+  </div>
+  <div class="belt-bar">
+    <button id="beltGreen" class="active" onclick="setBelt('green')">绿带</button>
+    <button id="beltBlack" onclick="setBelt('black')">黑带</button>
+  </div>
+</header>
+<nav>
+  <button id="tabQuiz" class="active" onclick="switchTab('quiz')">刷题</button>
+  <button id="tabWrong" onclick="switchTab('wrong')">错题本</button>
+  <button id="tabStats" onclick="switchTab('stats')">统计</button>
+</nav>
+<main>
+  <section id="viewQuiz">
+    <div class="card">
+      <select id="moduleSel" class="chapter-select" onchange="onFilterChange('module')"></select>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <select id="typeSel" class="chapter-select" onchange="onFilterChange('type')" style="flex:1;"></select>
+      </div>
+      <div class="mode-row">
+        <button id="modeSeq" class="active" onclick="setMode('seq')">顺序练习</button>
+        <button id="modeRnd" onclick="setMode('rnd')">随机抽题</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="q-tag"><span id="qChapter"></span><span id="qIndex"></span></div>
+      <div class="q-text" id="qText"></div>
+      <div id="qOptions"></div>
+      <div class="analysis" id="qAnalysis">
+        <div id="analysisText"></div>
+        <div class="src" id="analysisSrc"></div>
+      </div>
+      <div class="action-row" id="actionRow">
+        <button class="btn-plain" onclick="prevQuestion()">上一题</button>
+        <button class="btn-primary" id="btnSubmitMulti" onclick="submitMulti()" style="display:none;">提交答案</button>
+        <button class="btn-primary" id="btnNext" onclick="nextQuestion()">下一题</button>
+      </div>
+    </div>
+  </section>
+  <section id="viewWrong" style="display:none;">
+    <div class="card" id="wrongList"></div>
+  </section>
+  <section id="viewStats" style="display:none;">
+    <div class="stat-grid">
+      <div class="stat"><div class="num" id="stTotal">0</div><div class="label">题库总题数</div></div>
+      <div class="stat"><div class="num" id="stAnswered">0</div><div class="label">已作答</div></div>
+      <div class="stat"><div class="num" id="stRate">0%</div><div class="label">正确率</div></div>
+      <div class="stat"><div class="num" id="stWrong">0</div><div class="label">错题数</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:700;margin-bottom:6px;">近 7 天打卡</div>
+      <div class="week" id="weekStrip"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+<div class="mask" id="unlockMask">
+  <div class="unlock-modal">
+    <h3>🔓 免费解锁全题库</h3>
+    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入所在微信备考群的「群口令」即可免费解锁黑带/绿带全部题目与解析，口令有效期见群公告。</div>
+    <div class="unlock-state" id="unlockStateBox" style="display:none;"></div>
+    <input class="unlock-input" id="unlockInput" type="text" placeholder="输入群口令，如 SS-XXXX-XXXX" autocomplete="off">
+    <div class="unlock-msg" id="unlockMsg">口令请向群主/管理员索取，群公告中也会公布。</div>
+    <button class="u-btn primary" onclick="tryUnlock()">验证并解锁</button>
+    <button class="u-btn ghost" onclick="closeUnlock()">暂不解锁</button>
+  </div>
+</div>
+<script>
+/* ========== 题库 ========== */
+const BANK = (typeof SIXSIGMA_BANK !== 'undefined' && SIXSIGMA_BANK) ? SIXSIGMA_BANK : { green: [], black: [], meta: {} };
+const BELT_LABEL = { green: '绿带', black: '黑带' };
+const MODULES = ['概述', '统计', '测量', '分析', '改善', '控制', '设计', '精益'];
+
+/* ========== 群口令免费解锁（零后端） ========== */
+/* passport-config.js 提供 trialPerDay / unlockDays / codes（口令SHA-256哈希） */
+const PASSPORT = (typeof window.SS_PASSPORT !== 'undefined' && window.SS_PASSPORT) ? window.SS_PASSPORT : { trialPerDay: 15, unlockDays: 30, codes: [] };
+
+/* SHA-256（精简标准实现，本地校验口令哈希） */
+function sha256HexIn(str) {
+  function utf8Encode(s) {
+    const out = [];
+    for (let i = 0; i < s.length; i++) {
+      let c = s.charCodeAt(i);
+      if (c < 128) out.push(c);
+      else if (c < 2048) { out.push(192 | (c >> 6)); out.push(128 | (c & 63)); }
+      else if (c < 55296 || c >= 57344) { out.push(224 | (c >> 12)); out.push(128 | ((c >> 6) & 63)); out.push(128 | (c & 63)); }
+      else { i++; c = 65536 + (((c & 1023) << 10) | (s.charCodeAt(i) & 1023)); out.push(240 | (c >> 18)); out.push(128 | ((c >> 12) & 63)); out.push(128 | ((c >> 6) & 63)); out.push(128 | (c & 63)); }
+    }
+    return out;
+  }
+  const bytes = utf8Encode(str), bitLen = bytes.length * 8;
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  const padded = bytes.slice(); padded.push(0x80);
+  while (padded.length % 64 !== 56) padded.push(0);
+  for (let i = 7; i >= 0; i--) padded.push((bitLen / Math.pow(2, 8 * i)) & 0xff);
+  const rotr = (x, n) => ((x >>> n) | (x << (32 - n))) >>> 0;
+  for (let off = 0; off < padded.length; off += 64) {
+    const w = new Array(64).fill(0);
+    for (let i = 0; i < 16; i++) w[i] = (((padded[off + 4 * i] << 24) | (padded[off + 4 * i + 1] << 16) | (padded[off + 4 * i + 2] << 8) | padded[off + 4 * i + 3])) >>> 0;
+    for (let i = 16; i < 64; i++) { const s0 = (rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3)) >>> 0; const s1 = (rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10)) >>> 0; w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0; }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) >>> 0, ch = ((e & f) ^ ((~e) & g)) >>> 0;
+      const temp1 = (h + S1 + ch + K[i] + w[i]) >>> 0;
+      const S0 = (rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) >>> 0, maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
+      const temp2 = (S0 + maj) >>> 0;
+      h = g; g = f; f = e; e = (d + temp1) >>> 0; d = c; c = b; b = a; a = (temp1 + temp2) >>> 0;
+    }
+    H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+    H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+  }
+  let result = '';
+  for (let i = 0; i < 8; i++) result += ('00000000' + (H[i] >>> 0).toString(16)).slice(-8);
+  return result;
+}
+const sha256Hex = sha256HexIn;
+window.sha256Hex = sha256Hex;
+
+const LS_UNLOCK = 'ss08_unlock';
+function unlockState() {
+  const u = lsGet(LS_UNLOCK, null);
+  if (!u || !u.hash || !u.group) return null;
+  const hit = (PASSPORT.codes || []).find(c => c[0] === u.hash);
+  if (!hit) return null;                          // 口令已被管理员撤回
+  if (u.exp && Date.now() > u.exp) return null;   // 已过期
+  return u;
+}
+function trialKey() { return 'ss08_trial_' + todayStr(); }
+function trialUsed() { return lsGet(trialKey(), 0) || 0; }
+function trialPerDay() { return parseInt(PASSPORT.trialPerDay, 10) || 15; }
+function trialLeft() { if (unlockState()) return -1; return Math.max(0, trialPerDay() - trialUsed()); }
+function consumeTrial() { if (unlockState()) return; lsSet(trialKey(), trialUsed() + 1); renderUnlockBar(); }
+function ensureTrial() {
+  if (unlockState()) return true;
+  if (trialLeft() > 0) return true;
+  openUnlock();
+  showUnlockMsg('今日免费体验已达上限，输入群口令即可解锁全部题目', true);
+  return false;
+}
+function tryUnlock() {
+  const input = document.getElementById('unlockInput').value.trim();
+  if (!input) { showUnlockMsg('请输入群口令', true); return; }
+  const h = sha256Hex(input);
+  const hit = (PASSPORT.codes || []).find(c => c[0] === h);
+  if (!hit) { showUnlockMsg('口令不正确，请检查大小写与连字符后重试', true); return; }
+  const days = parseInt(hit[2], 10);
+  const exp = (isNaN(days) || days <= 0) ? 0 : Date.now() + days * 86400000;
+  lsSet(LS_UNLOCK, { hash: h, group: hit[1], exp: exp, at: Date.now() });
+  closeUnlock();
+  toast('解锁成功，欢迎「' + hit[1] + '」成员 🎉');
+  renderUnlockBar();
+}
+function renderUnlockBar() {
+  const u = unlockState();
+  const txt = document.getElementById('unlockTxt');
+  const btn = document.getElementById('btnUnlock');
+  document.getElementById('trialNum').textContent = trialPerDay();
+  if (u) {
+    const remain = u.exp ? Math.max(0, Math.ceil((u.exp - Date.now()) / 86400000)) : 0;
+    txt.textContent = u.group + (remain ? ' · 已解锁剩 ' + remain + ' 天' : ' · 已永久解锁');
+    btn.textContent = '口令管理';
+    btn.classList.add('free');
+  } else {
+    txt.textContent = '体验模式 · 今日可答 ' + trialLeft() + ' 题';
+    btn.textContent = '免费解锁';
+    btn.classList.remove('free');
+  }
+}
+function openUnlock() {
+  const u = unlockState();
+  document.getElementById('unlockStateBox').style.display = u ? '' : 'none';
+  document.getElementById('unlockHint').style.display = u ? 'none' : '';
+  if (u) {
+    const remain = u.exp ? Math.max(0, Math.ceil((u.exp - Date.now()) / 86400000)) : 0;
+    document.getElementById('unlockStateBox').textContent = '当前状态：已解锁「' + u.group + '」' + (remain ? '，剩余 ' + remain + ' 天' : '，永久有效');
+  }
+  document.getElementById('unlockInput').value = '';
+  showUnlockMsg(u ? '如需更换口令，输入新口令后点按钮重新解锁。' : '口令请向群主/管理员索取，群公告中也会公布。', false);
+  document.getElementById('unlockMask').classList.add('show');
+}
+function closeUnlock() { document.getElementById('unlockMask').classList.remove('show'); }
+function showUnlockMsg(msg, isErr) {
+  const el = document.getElementById('unlockMsg');
+  el.textContent = msg;
+  el.className = 'unlock-msg' + (isErr ? ' err' : '');
+}
+
+/* ========== 状态与持久化（localStorage） ========== */
+const LS = {
+  record: 'ss08_record',
+  wrong: 'ss08_wrong',
+  checkins: 'ss08_checkins'
+};
+function lsGet(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
+
+let belt = 'green';     // green | black
+let bank = BANK.green;  // 当前带题库
+let quiz = [];          // 当前练习队列
+let qpos = 0;           // 当前题目下标
+let mode = 'seq';       // seq | rnd
+let filter = { module: '全部', type: '全部' };
+let multiPicked = [];   // 多选题已选项
+
+/* ========== 全局控件 ========== */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = 1;
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => { t.style.opacity = 0; }, 1600);
+}
+function switchTab(t) {
+  ['quiz', 'wrong', 'stats'].forEach(x => {
+    document.getElementById('view' + x.charAt(0).toUpperCase() + x.slice(1)).style.display = (x === t) ? '' : 'none';
+    document.getElementById('tab' + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle('active', x === t);
+  });
+  if (t === 'wrong') renderWrong();
+  if (t === 'stats') renderStats();
+}
+function refreshBankInfo() {
+  const n = bank.length;
+  const subs = new Set(bank.map(q => q.module || '未分类')).size;
+  let txt = BELT_LABEL[belt] + '题库 ' + n + ' 题 · ' + subs + ' 个模块';
+  document.getElementById('bankInfo').textContent = txt;
+}
+function setBelt(b) {
+  belt = b;
+  document.getElementById('beltGreen').classList.toggle('active', b === 'green');
+  document.getElementById('beltBlack').classList.toggle('active', b === 'black');
+  bank = (b === 'green' ? BANK.green : BANK.black);
+  refreshBankInfo();
+  filter = { module: '全部', type: '全部' };
+  buildFilters();
+  startQuiz();
+  renderStats();
+}
+function moduleOptions() {
+  const arr = [];
+  bank.forEach(q => { const s = q.module || '未分类'; if (!arr.includes(s)) arr.push(s); });
+  return ['全部'].concat(arr);
+}
+function typeOptions() {
+  const arr = [];
+  bank.forEach(q => { const t = q.type || '单选'; if (!arr.includes(t)) arr.push(t); });
+  return ['全部'].concat(arr);
+}
+function buildFilters() {
+  const modSel = document.getElementById('moduleSel');
+  modSel.innerHTML = '';
+  moduleOptions().forEach(s => {
+    const op = document.createElement('option');
+    op.value = s; op.textContent = s;
+    modSel.appendChild(op);
+  });
+  modSel.value = filter.module || '全部';
+  const typeSel = document.getElementById('typeSel');
+  typeSel.innerHTML = '';
+  typeOptions().forEach(t => {
+    const op = document.createElement('option');
+    op.value = t; op.textContent = t;
+    typeSel.appendChild(op);
+  });
+  typeSel.value = filter.type || '全部';
+}
+function onFilterChange(which) {
+  if (which === 'module') { filter.module = document.getElementById('moduleSel').value; }
+  else if (which === 'type') { filter.type = document.getElementById('typeSel').value; }
+  startQuiz();
+}
+function startQuiz() {
+  const pool = bank.filter(q => {
+    if (filter.module !== '全部' && q.module !== filter.module) return false;
+    if (filter.type !== '全部' && (q.type || '单选') !== filter.type) return false;
+    return true;
+  });
+  if (pool.length === 0) {
+    document.getElementById('qText').textContent = '当前筛选下暂无题目，请调整筛选条件';
+    document.getElementById('qIndex').textContent = '0 / 0';
+    document.getElementById('qOptions').innerHTML = '';
+    document.getElementById('qAnalysis').classList.remove('show');
+    document.getElementById('btnNext').textContent = '下一题';
+    return;
+  }
+  quiz = mode === 'rnd' ? shuffle(pool) : pool;
+  qpos = 0;
+  renderQuestion();
+}
+function setMode(m) {
+  mode = m;
+  document.getElementById('modeSeq').classList.toggle('active', m === 'seq');
+  document.getElementById('modeRnd').classList.toggle('active', m === 'rnd');
+  startQuiz();
+}
+function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function letter(i) { return String.fromCharCode(65 + i); }
+function qType(q) { return q.type || '单选'; }
+function qMeta(q) { return (q.module || '未分类') + ' · ' + BELT_LABEL[belt]; }
+function renderTypeTag(q) {
+  return '<span class="type-tag">' + qType(q) + '</span>';
+}
+function renderQuestion() {
+  if (!quiz.length) return;
+  const oldtt = document.getElementById('multiResult');
+  if (oldtt) oldtt.remove();
+  const q = quiz[qpos];
+  const t = qType(q);
+  document.getElementById('qChapter').innerHTML = renderTypeTag(q) + '<span>' + qMeta(q) + '</span>';
+  document.getElementById('qIndex').textContent = (qpos + 1) + ' / ' + quiz.length;
+  document.getElementById('qText').textContent = q.question;
+  const box = document.getElementById('qOptions');
+  box.innerHTML = '';
+  const an = document.getElementById('qAnalysis');
+  an.classList.remove('show');
+  document.getElementById('btnNext').textContent = '下一题';
+  const rec = lsGet(LS.record, {});
+  const isAnswered = rec && rec[q.id];
+  if (t === '多选') {
+    multiPicked = isAnswered ? (rec[q.id].picked || []).slice() : [];
+    (q.options || []).forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'option' + (multiPicked.includes(letter(i)) ? ' picked' : '');
+      const hasPrefix = /^\s*[A-Ea-e][.、．]/.test(opt);
+      btn.textContent = hasPrefix ? opt : letter(i) + '. ' + opt;
+      btn.onclick = () => {
+        if (isAnswered) return;
+        const L = letter(i);
+        const idx = multiPicked.indexOf(L);
+        if (idx >= 0) multiPicked.splice(idx, 1); else multiPicked.push(L);
+        btn.classList.toggle('picked', multiPicked.includes(L));
+      };
+      if (isAnswered) {
+        btn.disabled = true;
+        if (q.answer.includes(letter(i))) btn.classList.add('correct');
+        else if (multiPicked.includes(letter(i))) btn.classList.add('wrong');
+      }
+      box.appendChild(btn);
+    });
+    if (!isAnswered) document.getElementById('btnSubmitMulti').style.display = '';
+    return;
+  }
+  (q.options || []).forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    const hasPrefix = /^\s*[A-Ea-e][.、．]/.test(opt);
+    btn.textContent = hasPrefix ? opt : letter(i) + '. ' + opt;
+    btn.onclick = () => choose(q, letter(i), btn, box);
+    if (isAnswered) {
+      btn.disabled = true;
+      if (letter(i) === q.answer) btn.classList.add('correct');
+    }
+    box.appendChild(btn);
+  });
+  if (isAnswered) {
+    showAnalysis(q);
+    document.getElementById('btnNext').textContent = '下一题';
+  } else {
+    document.getElementById('btnNext').textContent = '跳过';
+  }
+}
+function showAnalysis(q) {
+  document.getElementById('analysisText').textContent = q.analysis || '（暂无解析）';
+  document.getElementById('analysisSrc').textContent = q.source ? '出处：' + q.source : '';
+  document.getElementById('qAnalysis').classList.add('show');
+}
+function choose(q, choice, btn, box) {
+  if (answered(lsGet(LS.record, {}), q.id)) return;
+  if (!ensureTrial()) return;
+  const rec = lsGet(LS.record, {});
+  rec[q.id] = { correct: choice === q.answer, t: Date.now() };
+  lsSet(LS.record, rec);
+  consumeTrial();
+  if (choice !== q.answer) {
+    const wr = lsGet(LS.wrong, []);
+    if (!wr.includes(q.id)) wr.push(q.id);
+    lsSet(LS.wrong, wr);
+  }
+  box.querySelectorAll('.option').forEach(b => b.disabled = true);
+  btn.classList.add(choice === q.answer ? 'correct' : 'wrong');
+  box.querySelectorAll('.option').forEach(b => {
+    if (b.textContent.trim().charAt(0).toUpperCase() + '.' === q.answer + '.') b.classList.add('correct');
+  });
+  showAnalysis(q);
+  document.getElementById('btnNext').textContent = '下一题';
+  renderStats();
+}
+function submitMulti() {
+  const q = quiz[qpos];
+  if (answered(lsGet(LS.record, {}), q.id)) return;
+  if (!ensureTrial()) return;
+  const right = Array.from(String(q.answer).split('')).sort().join('');
+  const picked = multiPicked.slice().sort().join('');
+  const correct = picked === right;
+  const rec = lsGet(LS.record, {});
+  rec[q.id] = { correct: correct, picked: multiPicked.slice(), t: Date.now() };
+  lsSet(LS.record, rec);
+  consumeTrial();
+  if (!correct) {
+    const wr = lsGet(LS.wrong, []);
+    if (!wr.includes(q.id)) wr.push(q.id);
+    lsSet(LS.wrong, wr);
+  }
+  const box = document.getElementById('qOptions');
+  box.querySelectorAll('.option').forEach(b => b.disabled = true);
+  box.querySelectorAll('.option').forEach(b => {
+    const L = b.textContent.trim().charAt(0).toUpperCase();
+    if (q.answer.includes(L)) b.classList.add('correct');
+    else if (multiPicked.includes(L)) b.classList.add('wrong');
+  });
+  document.getElementById('btnSubmitMulti').style.display = 'none';
+  const miss = right.split('').filter(L => !multiPicked.includes(L)).join('');
+  const over = multiPicked.filter(L => !right.includes(L)).join('');
+  let tip = '';
+  if (correct) tip = '✅ 全部选对，得分';
+  else {
+    if (over) tip = '❌ 多选了 ' + over + '，不得分（本题答案 ' + right + '）';
+    else tip = '⚠️ 少选了 ' + miss + '，少选不得分（本题答案 ' + right + '）';
+  }
+  showAnalysis(q);
+  const tt = document.createElement('div');
+  tt.id = 'multiResult';
+  tt.style.cssText = 'margin-top:8px;font-size:14px;font-weight:700;color:' + (correct ? 'var(--ok)' : 'var(--err)') + ';';
+  tt.textContent = tip;
+  document.getElementById('qAnalysis').insertBefore(tt, document.getElementById('qAnalysis').firstChild);
+  document.getElementById('btnNext').textContent = '下一题';
+  renderStats();
+}
+function answered(rec, id) { return rec && rec[id]; }
+function nextQuestion() {
+  if (qpos < quiz.length - 1) { qpos++; renderQuestion(); }
+  else { toast('本次练习完成，可切换筛选继续刷题'); startQuiz(); }
+}
+function prevQuestion() {
+  if (qpos > 0) { qpos--; renderQuestion(); }
+}
+/* ========== 错题本 ========== */
+function renderWrong() {
+  const wr = lsGet(LS.wrong, []);
+  const box = document.getElementById('wrongList');
+  if (!wr.length) { box.innerHTML = '<div class="empty">暂无错题，很棒！继续保持 🎉</div>'; return; }
+  box.innerHTML = '<div style="font-size:14px;font-weight:700;margin-bottom:8px;">共 ' + wr.length + ' 道错题，点击重做</div>';
+  wr.forEach(id => {
+    const q = bank.find(x => x.id === id);
+    if (!q) return;
+    const d = document.createElement('div');
+    d.className = 'wrong-item';
+    const tag = qType(q);
+    d.innerHTML = '<span style="flex:1;margin-right:10px;">[' + tag + ' ' + (q.module || '') + '] ' + (q.question || '').slice(0, 26) + ((q.question || '').length > 26 ? '…' : '') + '</span>';
+    const b = document.createElement('button');
+    b.textContent = '重做';
+    b.onclick = () => {
+      filter.module = q.module || '全部';
+      filter.type = qType(q);
+      buildFilters();
+      startQuiz();
+      const idx = quiz.findIndex(x => x.id === q.id);
+      if (idx >= 0) { qpos = idx; renderQuestion(); }
+      switchTab('quiz');
+    };
+    d.appendChild(b);
+    box.appendChild(d);
+  });
+}
+/* ========== 打卡 ========== */
+function todayStr() {
+  const d = new Date(); const p = n => (n < 10 ? '0' : '') + n;
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function streakDays() {
+  const list = lsGet(LS.checkins, []);
+  let streak = 0; const p = n => (n < 10 ? '0' : '') + n;
+  const d = new Date();
+  const fmt = dd => dd.getFullYear() + '-' + p(dd.getMonth() + 1) + '-' + p(dd.getDate());
+  if (!list.includes(todayStr())) { d.setDate(d.getDate() - 1); }
+  while (true) {
+    if (list.includes(fmt(d))) streak++; else break;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+function doCheckin() {
+  const list = lsGet(LS.checkins, []);
+  const t = todayStr();
+  if (!list.includes(t)) { list.push(t); lsSet(LS.checkins, list); toast('打卡成功，坚持就是胜利！'); }
+  else { toast('今天已经打过卡啦'); }
+  renderCheckin();
+}
+function renderCheckin() {
+  const list = lsGet(LS.checkins, []);
+  const btn = document.getElementById('btnCheckin');
+  if (list.includes(todayStr())) { btn.textContent = '已打卡'; btn.classList.add('done'); }
+  else { btn.textContent = '今日打卡'; btn.classList.remove('done'); }
+  document.getElementById('streakText').textContent = '连续打卡 ' + streakDays() + ' 天';
+  const strip = document.getElementById('weekStrip');
+  strip.innerHTML = '';
+  const names = ['日', '一', '二', '三', '四', '五', '六'];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const p = n => (n < 10 ? '0' : '') + n;
+    const ds = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    const on = list.includes(ds);
+    const cell = document.createElement('div');
+    cell.className = 'day';
+    cell.innerHTML = '<div class="dot' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</div><div class="w-name">' + names[d.getDay()] + '</div>';
+    strip.appendChild(cell);
+  }
+}
+/* ========== 统计 ========== */
+function renderStats() {
+  const rec = lsGet(LS.record, {});
+  const ids = Object.keys(rec);
+  const correct = ids.filter(id => rec[id].correct).length;
+  document.getElementById('stTotal').textContent = bank.length;
+  document.getElementById('stAnswered').textContent = ids.length;
+  document.getElementById('stRate').textContent = ids.length ? Math.round(100 * correct / ids.length) + '%' : '—';
+  document.getElementById('stWrong').textContent = lsGet(LS.wrong, []).length;
+}
+/* ========== 初始化 ========== */
+renderUnlockBar();
+buildFilters();
+refreshBankInfo();
+startQuiz();
+renderCheckin();
+renderStats();
+</script>
+</body>
+</html>
