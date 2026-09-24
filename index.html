@@ -87,8 +87,8 @@
     <button class="btn-checkin" id="btnCheckin" onclick="doCheckin()">今日打卡</button>
   </div>
   <div class="unlock-bar" id="unlockBar">
-    <span class="u-txt" id="unlockTxt">体验模式 · 今日可答 15 题</span>
-    <button class="btn-unlock" id="btnUnlock" onclick="openUnlock()">免费解锁</button>
+    <span class="u-txt" id="unlockTxt">全量题库免费开放 · 无需口令 · 黑带/绿带任意刷</span>
+    <button class="btn-unlock" id="btnUnlock" onclick="openUnlock()" style="display:none;">免费解锁</button>
   </div>
   <div class="belt-bar">
     <button id="beltGreen" class="active" onclick="setBelt('green')">绿带</button>
@@ -216,6 +216,8 @@ window.sha256Hex = sha256Hex;
 
 const LS_UNLOCK = 'ss08_unlock';
 function unlockState() {
+  /* 全量免费开放模式：任何访客直接视为已解锁，无需进群、无需口令 */
+  if (PASSPORT.freeForAll) return { hash: 'free-for-all', group: '全量免费开放', exp: 0, at: Date.now() };
   const u = lsGet(LS_UNLOCK, null);
   if (!u || !u.hash || !u.group) return null;
   const hit = (PASSPORT.codes || []).find(c => c[0] === u.hash);
@@ -249,10 +251,17 @@ function tryUnlock() {
   renderUnlockBar();
 }
 function renderUnlockBar() {
-  const u = unlockState();
   const txt = document.getElementById('unlockTxt');
   const btn = document.getElementById('btnUnlock');
-  document.getElementById('trialNum').textContent = trialPerDay();
+  /* 全量免费开放：仅显示静态说明，隐藏解锁按钮，不出现任何口令/解锁入口 */
+  if (PASSPORT.freeForAll) {
+    if (txt) txt.textContent = '全量题库免费开放 · 无需口令 · 黑带/绿带任意刷';
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  const u = unlockState();
+  const trialNum = document.getElementById('trialNum');
+  if (trialNum) trialNum.textContent = trialPerDay();
   if (u) {
     const remain = u.exp ? Math.max(0, Math.ceil((u.exp - Date.now()) / 86400000)) : 0;
     txt.textContent = u.group + (remain ? ' · 已解锁剩 ' + remain + ' 天' : ' · 已永久解锁');
