@@ -40,6 +40,8 @@
   .analysis.show { display:block; }
   #analysisText { white-space:pre-wrap; line-height:1.8; }
   .analysis .src { color:var(--muted); font-size:12px; margin-top:6px; }
+  .q-img-wrap { margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+  .q-img { max-width:100%; height:auto; border:1px solid #eee; border-radius:6px; background:#fff; }
   .action-row { display:flex; gap:8px; margin-top:12px; }
   .action-row button { flex:1; padding:11px; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; }
   .btn-primary { background:var(--primary); color:#fff; }
@@ -401,6 +403,7 @@ function setMode(m) {
 }
 function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function letter(i) { return String.fromCharCode(65 + i); }
+function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function qType(q) { return q.type || '单选'; }
 function qMeta(q) { return (q.module || '未分类') + ' · ' + BELT_LABEL[belt]; }
 function renderTypeTag(q) {
@@ -414,7 +417,7 @@ function renderQuestion() {
   const t = qType(q);
   document.getElementById('qChapter').innerHTML = renderTypeTag(q) + '<span>' + qMeta(q) + '</span>';
   document.getElementById('qIndex').textContent = (qpos + 1) + ' / ' + quiz.length;
-  document.getElementById('qText').textContent = q.question;
+  document.getElementById('qText').innerHTML = escHtml(q.question) + (q.image ? '<div class="q-img-wrap">' + q.image.map(p => '<img class="q-img" loading="lazy" src="' + p + '" alt="题图">').join('') + '</div>' : '');
   const box = document.getElementById('qOptions');
   box.innerHTML = '';
   const an = document.getElementById('qAnalysis');
@@ -467,7 +470,10 @@ function renderQuestion() {
 }
 function showAnalysis(q) {
   document.getElementById('analysisText').textContent = q.analysis || '（暂无解析）';
-  document.getElementById('analysisSrc').textContent = q.source ? '出处：' + q.source : '';
+  const srcParts = [];
+  if (q.reference) srcParts.push('教材出处：' + q.reference);
+  if (q.source) srcParts.push('来源：' + q.source);
+  document.getElementById('analysisSrc').textContent = srcParts.join(' | ');
   document.getElementById('qAnalysis').classList.add('show');
 }
 function choose(q, choice, btn, box) {
