@@ -149,7 +149,7 @@
 <div class="mask" id="unlockMask">
   <div class="unlock-modal">
     <h3>🔓 解锁全题库</h3>
-    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。付费口令 139 元/考期（约半年，每年 7 月 1 日 / 12 月 1 日失效），购买请咨询管理员微信；朋友口令为管理员定向发放，勿外传。</div>
+    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。付费口令今日价 <b id="priceToday"></b> 元（1 元/天 × 距失效日剩余 <b id="priceDays"></b> 天，口令统一在每年 7 月 1 日 / 12 月 1 日失效），扫码购买请联系管理员微信；朋友口令为管理员定向发放，勿外传。</div>
     <div class="unlock-state" id="unlockStateBox" style="display:none;"></div>
     <input class="unlock-input" id="unlockInput" type="text" placeholder="输入口令，如 SS-XXXX-XXXX" autocomplete="off">
     <div class="unlock-msg" id="unlockMsg">口令请向管理员购买或索取；口令统一在每年 7 月 1 日 / 12 月 1 日失效。</div>
@@ -223,6 +223,22 @@ function fmtLocalDate(ts) {
   const p = n => (n < 10 ? '0' + n : '' + n);
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
+/* ========== 动态计价：距最近失效日剩余天数 × 1 元/天 ========== */
+function calcPrice() {
+  const today = new Date();
+  const y = today.getFullYear();
+  const cands = [new Date(y, 6, 1), new Date(y, 11, 1), new Date(y + 1, 6, 1), new Date(y + 1, 11, 1)];
+  const next = cands.filter(d => d.getTime() > today.getTime()).sort((a, b) => a - b)[0];
+  const days = Math.max(1, Math.ceil((next.getTime() - today.getTime()) / 86400000));
+  return { days: days, date: fmtLocalDate(next.getTime()) };
+}
+function renderPrice() {
+  const p = calcPrice();
+  const t = document.getElementById('priceToday');
+  const d = document.getElementById('priceDays');
+  if (t) t.textContent = p.days;
+  if (d) d.textContent = p.days;
+}
 function unlockExpiryOf(hit) {
   /* 失效日期统一为每年 7 月 1 日 / 12 月 1 日，取该日 23:59:59 作为过期时刻 */
   const d = hit && hit[3];
@@ -291,6 +307,7 @@ function openUnlock() {
   }
   document.getElementById('unlockInput').value = '';
   showUnlockMsg(u ? '如需更换口令，输入新口令后点按钮重新解锁。' : '口令可向管理员购买或索取；所有口令统一在每年 7 月 1 日 / 12 月 1 日失效。', false);
+  renderPrice();
   document.getElementById('unlockMask').classList.add('show');
 }
 function closeUnlock() { document.getElementById('unlockMask').classList.remove('show'); }
@@ -636,6 +653,7 @@ function renderStats() {
 }
 /* ========== 初始化 ========== */
 renderUnlockBar();
+renderPrice();
 buildFilters();
 refreshBankInfo();
 startQuiz();
