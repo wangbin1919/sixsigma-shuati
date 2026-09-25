@@ -89,8 +89,8 @@
     <button class="btn-checkin" id="btnCheckin" onclick="doCheckin()">今日打卡</button>
   </div>
   <div class="unlock-bar" id="unlockBar">
-    <span class="u-txt" id="unlockTxt">全量题库免费开放 · 无需口令 · 黑带/绿带任意刷</span>
-    <button class="btn-unlock" id="btnUnlock" onclick="openUnlock()" style="display:none;">免费解锁</button>
+    <span class="u-txt" id="unlockTxt">体验模式 · 每日免费试答 15 题 · 口令解锁全库</span>
+    <button class="btn-unlock" id="btnUnlock" onclick="openUnlock()">免费解锁</button>
   </div>
   <div class="belt-bar">
     <button id="beltGreen" class="active" onclick="setBelt('green')">绿带</button>
@@ -148,11 +148,11 @@
 <div class="toast" id="toast"></div>
 <div class="mask" id="unlockMask">
   <div class="unlock-modal">
-    <h3>🔓 免费解锁全题库</h3>
-    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入所在微信备考群的「群口令」即可免费解锁黑带/绿带全部题目与解析，口令有效期见群公告。</div>
+    <h3>🔓 解锁全题库</h3>
+    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。付费口令 139 元/考期（约半年，每年 7 月 1 日 / 12 月 1 日失效），购买请咨询管理员微信；朋友口令为管理员定向发放，勿外传。</div>
     <div class="unlock-state" id="unlockStateBox" style="display:none;"></div>
-    <input class="unlock-input" id="unlockInput" type="text" placeholder="输入群口令，如 SS-XXXX-XXXX" autocomplete="off">
-    <div class="unlock-msg" id="unlockMsg">口令请向群主/管理员索取，群公告中也会公布。</div>
+    <input class="unlock-input" id="unlockInput" type="text" placeholder="输入口令，如 SS-XXXX-XXXX" autocomplete="off">
+    <div class="unlock-msg" id="unlockMsg">口令请向管理员购买或索取；口令统一在每年 7 月 1 日 / 12 月 1 日失效。</div>
     <button class="u-btn primary" onclick="tryUnlock()">验证并解锁</button>
     <button class="u-btn ghost" onclick="closeUnlock()">暂不解锁</button>
   </div>
@@ -163,9 +163,9 @@ const BANK = (typeof SIXSIGMA_BANK !== 'undefined' && SIXSIGMA_BANK) ? SIXSIGMA_
 const BELT_LABEL = { green: '绿带', black: '黑带' };
 const MODULES = ['概述', '统计', '测量', '分析', '改善', '控制', '设计', '精益'];
 
-/* ========== 群口令免费解锁（零后端） ========== */
-/* passport-config.js 提供 trialPerDay / unlockDays / codes（口令SHA-256哈希） */
-const PASSPORT = (typeof window.SS_PASSPORT !== 'undefined' && window.SS_PASSPORT) ? window.SS_PASSPORT : { trialPerDay: 15, unlockDays: 30, codes: [] };
+/* ========== 口令解锁（零后端：付费口令 / 朋友口令） ========== */
+/* passport-config.js 提供 trialPerDay / codes：[哈希, 名称, 类型paid|friend, 失效日期YYYY-MM-DD] */
+const PASSPORT = (typeof window.SS_PASSPORT !== 'undefined' && window.SS_PASSPORT) ? window.SS_PASSPORT : { trialPerDay: 15, codes: [] };
 
 /* SHA-256（精简标准实现，本地校验口令哈希） */
 function sha256HexIn(str) {
@@ -217,15 +217,27 @@ const sha256Hex = sha256HexIn;
 window.sha256Hex = sha256Hex;
 
 const LS_UNLOCK = 'ss08_unlock';
+function fmtLocalDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const p = n => (n < 10 ? '0' + n : '' + n);
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function unlockExpiryOf(hit) {
+  /* 失效日期统一为每年 7 月 1 日 / 12 月 1 日，取该日 23:59:59 作为过期时刻 */
+  const d = hit && hit[3];
+  if (!d || typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return 0;
+  const t = new Date(d + 'T23:59:59').getTime();
+  return isNaN(t) ? 0 : t;
+}
 function unlockState() {
-  /* 全量免费开放模式：任何访客直接视为已解锁，无需进群、无需口令 */
-  if (PASSPORT.freeForAll) return { hash: 'free-for-all', group: '全量免费开放', exp: 0, at: Date.now() };
   const u = lsGet(LS_UNLOCK, null);
   if (!u || !u.hash || !u.group) return null;
   const hit = (PASSPORT.codes || []).find(c => c[0] === u.hash);
   if (!hit) return null;                          // 口令已被管理员撤回
-  if (u.exp && Date.now() > u.exp) return null;   // 已过期
-  return u;
+  const exp = unlockExpiryOf(hit);                // 每年 7/1、12/1 失效
+  if (exp && Date.now() > exp) return null;       // 已过失效日
+  return { hash: u.hash, group: u.group, type: hit[2] || '', exp: exp, at: u.at };
 }
 function trialKey() { return 'ss08_trial_' + todayStr(); }
 function trialUsed() { return lsGet(trialKey(), 0) || 0; }
@@ -236,37 +248,31 @@ function ensureTrial() {
   if (unlockState()) return true;
   if (trialLeft() > 0) return true;
   openUnlock();
-  showUnlockMsg('今日免费体验已达上限，输入群口令即可解锁全部题目', true);
+  showUnlockMsg('今日免费体验已达上限，输入口令即可解锁全部题目', true);
   return false;
 }
 function tryUnlock() {
   const input = document.getElementById('unlockInput').value.trim();
-  if (!input) { showUnlockMsg('请输入群口令', true); return; }
+  if (!input) { showUnlockMsg('请输入口令', true); return; }
   const h = sha256Hex(input);
   const hit = (PASSPORT.codes || []).find(c => c[0] === h);
   if (!hit) { showUnlockMsg('口令不正确，请检查大小写与连字符后重试', true); return; }
-  const days = parseInt(hit[2], 10);
-  const exp = (isNaN(days) || days <= 0) ? 0 : Date.now() + days * 86400000;
-  lsSet(LS_UNLOCK, { hash: h, group: hit[1], exp: exp, at: Date.now() });
+  const exp = unlockExpiryOf(hit);                       // 每年 7/1、12/1 失效
+  if (exp && Date.now() > exp) { showUnlockMsg('该口令已于 ' + hit[3] + ' 失效，请购买或索取新口令', true); return; }
+  lsSet(LS_UNLOCK, { hash: h, group: hit[1], type: hit[2] || '', exp: exp, at: Date.now() });
   closeUnlock();
-  toast('解锁成功，欢迎「' + hit[1] + '」成员 🎉');
+  toast('解锁成功，欢迎「' + hit[1] + '」🎉 有效期至 ' + (hit[3] || '长期'));
   renderUnlockBar();
 }
 function renderUnlockBar() {
   const txt = document.getElementById('unlockTxt');
   const btn = document.getElementById('btnUnlock');
-  /* 全量免费开放：仅显示静态说明，隐藏解锁按钮，不出现任何口令/解锁入口 */
-  if (PASSPORT.freeForAll) {
-    if (txt) txt.textContent = '全量题库免费开放 · 无需口令 · 黑带/绿带任意刷';
-    if (btn) btn.style.display = 'none';
-    return;
-  }
   const u = unlockState();
   const trialNum = document.getElementById('trialNum');
   if (trialNum) trialNum.textContent = trialPerDay();
   if (u) {
-    const remain = u.exp ? Math.max(0, Math.ceil((u.exp - Date.now()) / 86400000)) : 0;
-    txt.textContent = u.group + (remain ? ' · 已解锁剩 ' + remain + ' 天' : ' · 已永久解锁');
+    const remain = u.exp ? Math.max(1, Math.ceil((u.exp - Date.now()) / 86400000)) : 0;
+    txt.textContent = u.group + ' · 有效期至 ' + fmtLocalDate(u.exp) + (remain ? '（剩 ' + remain + ' 天）' : '');
     btn.textContent = '口令管理';
     btn.classList.add('free');
   } else {
@@ -280,11 +286,11 @@ function openUnlock() {
   document.getElementById('unlockStateBox').style.display = u ? '' : 'none';
   document.getElementById('unlockHint').style.display = u ? 'none' : '';
   if (u) {
-    const remain = u.exp ? Math.max(0, Math.ceil((u.exp - Date.now()) / 86400000)) : 0;
-    document.getElementById('unlockStateBox').textContent = '当前状态：已解锁「' + u.group + '」' + (remain ? '，剩余 ' + remain + ' 天' : '，永久有效');
+    const remain = u.exp ? Math.max(1, Math.ceil((u.exp - Date.now()) / 86400000)) : 0;
+    document.getElementById('unlockStateBox').textContent = '当前状态：已解锁「' + u.group + '」' + (u.exp ? '，有效期至 ' + fmtLocalDate(u.exp) + '（剩 ' + remain + ' 天）' : '');
   }
   document.getElementById('unlockInput').value = '';
-  showUnlockMsg(u ? '如需更换口令，输入新口令后点按钮重新解锁。' : '口令请向群主/管理员索取，群公告中也会公布。', false);
+  showUnlockMsg(u ? '如需更换口令，输入新口令后点按钮重新解锁。' : '口令可向管理员购买或索取；所有口令统一在每年 7 月 1 日 / 12 月 1 日失效。', false);
   document.getElementById('unlockMask').classList.add('show');
 }
 function closeUnlock() { document.getElementById('unlockMask').classList.remove('show'); }
