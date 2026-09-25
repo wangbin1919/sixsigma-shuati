@@ -78,6 +78,13 @@
   .u-btn.primary { background:var(--primary); color:#fff; }
   .u-btn.ghost { background:#EEE; color:var(--text); margin-top:8px; }
   .unlock-state { background:#E8F5E9; border-radius:10px; padding:10px 12px; font-size:13px; color:var(--ok); margin-bottom:12px; }
+  /* ===== 扫码付费窗口 ===== */
+  .pay-box { margin-top:14px; background:#fff; border:1.5px solid #E0E0E0; border-radius:12px; padding:14px; text-align:center; }
+  .pay-price { font-size:16px; font-weight:700; color:var(--primary); margin-bottom:10px; }
+  .pay-price span { font-size:22px; }
+  .pay-qr { width:180px; height:auto; border-radius:8px; display:block; margin:0 auto 8px; }
+  .pay-note { font-size:12px; color:var(--muted); line-height:1.5; }
+
 </style>
 </head>
 <body>
@@ -149,7 +156,13 @@
 <div class="mask" id="unlockMask">
   <div class="unlock-modal">
     <h3>🔓 解锁全题库</h3>
-    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。付费口令今日价 <b id="priceToday"></b> 元（1 元/天 × 距失效日剩余 <b id="priceDays"></b> 天，口令统一在每年 7 月 1 日 / 12 月 1 日失效），扫码购买请联系管理员微信；朋友口令为管理员定向发放，勿外传。</div>
+    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。付费口令今日价 <b id="priceToday"></b> 元（1 元/天 × 距失效日剩余 <b id="priceDays"></b> 天，口令统一在每年 7 月 1 日 / 12 月 1 日失效），扫码购买请联系管理员微信；朋友口令为管理员定向发放，勿外传。
+      <div class="pay-box" id="payBox">
+        <div class="pay-price">今日价 <span id="payPrice"></span> 元</div>
+        <img class="pay-qr" src="img/wechat-qr.png" alt="微信支付收款码">
+        <div class="pay-note">支付后请截图发给管理员，换取今日口令</div>
+      </div>
+    </div>
     <div class="unlock-state" id="unlockStateBox" style="display:none;"></div>
     <input class="unlock-input" id="unlockInput" type="text" placeholder="输入口令，如 SS-XXXX-XXXX" autocomplete="off">
     <div class="unlock-msg" id="unlockMsg">口令请向管理员购买或索取；口令统一在每年 7 月 1 日 / 12 月 1 日失效。</div>
@@ -234,10 +247,12 @@ function calcPrice() {
 }
 function renderPrice() {
   const p = calcPrice();
-  const t = document.getElementById('priceToday');
-  const d = document.getElementById('priceDays');
-  if (t) t.textContent = p.days;
-  if (d) d.textContent = p.days;
+  const elToday = document.getElementById('priceToday');
+  const elDays = document.getElementById('priceDays');
+  const elPay = document.getElementById('payPrice');
+  if (elToday) elToday.textContent = p.days;
+  if (elDays) elDays.textContent = p.days;
+  if (elPay) elPay.textContent = p.days;
 }
 function unlockExpiryOf(hit) {
   /* 失效日期统一为每年 7 月 1 日 / 12 月 1 日，取该日 23:59:59 作为过期时刻 */
