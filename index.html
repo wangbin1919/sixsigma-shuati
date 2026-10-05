@@ -156,16 +156,20 @@
 <div class="mask" id="unlockMask">
   <div class="unlock-modal">
     <h3>🔓 解锁全题库</h3>
-    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。付费口令今日价 <b id="priceToday"></b> 元（1 元/天 × 距失效日剩余 <b id="priceDays"></b> 天，口令统一在每年 7 月 1 日 / 12 月 1 日失效），扫码购买请联系管理员微信；朋友口令为管理员定向发放，勿外传。
+    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。中质协考试日 <b>2026-11-08</b> 前有效（距考试剩 <b id="priceDays"></b> 天），扫码购买请联系管理员微信；朋友口令为管理员定向发放，勿外传。
       <div class="pay-box" id="payBox">
-        <div class="pay-price">今日价 <span id="payPrice"></span> 元</div>
+        <div class="pay-price" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+          <span>绿带 <b id="payGbPrice" style="font-size:20px; color:var(--accent);"></b> 元</span>
+          <span>黑带 <b id="payBbPrice" style="font-size:20px; color:var(--accent);"></b> 元</span>
+        </div>
+        <div class="pay-formula" style="font-size:12px; color:var(--muted); margin:4px 0 8px;">绿带 = 剩余天数×1（封顶49） · 黑带 = 剩余天数×2（封顶99）</div>
         <img class="pay-qr" src="img/wechat-qr.png" alt="微信支付收款码">
-        <div class="pay-note">支付后请截图发给管理员，换取今日口令</div>
+        <div class="pay-note">支付后请截图发给管理员，换取本期口令</div>
       </div>
     </div>
     <div class="unlock-state" id="unlockStateBox" style="display:none;"></div>
     <input class="unlock-input" id="unlockInput" type="text" placeholder="输入口令，如 SS-XXXX-XXXX" autocomplete="off">
-    <div class="unlock-msg" id="unlockMsg">口令请向管理员购买或索取；口令统一在每年 7 月 1 日 / 12 月 1 日失效。</div>
+    <div class="unlock-msg" id="unlockMsg">口令请向管理员购买或索取；口令统一在考试日 2026-11-08 失效，过期后需重新购买。</div>
     <button class="u-btn primary" onclick="tryUnlock()">验证并解锁</button>
     <button class="u-btn ghost" onclick="closeUnlock()">暂不解锁</button>
   </div>
@@ -236,26 +240,26 @@ function fmtLocalDate(ts) {
   const p = n => (n < 10 ? '0' + n : '' + n);
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
-/* ========== 动态计价：距最近失效日剩余天数 × 1 元/天 ========== */
+/* ========== 动态计价：距考试日剩余天数 × 1 元/天（绿带封顶49，黑带×2封顶99） ========== */
 function calcPrice() {
   const today = new Date();
-  const y = today.getFullYear();
-  const cands = [new Date(y, 6, 1), new Date(y, 11, 1), new Date(y + 1, 6, 1), new Date(y + 1, 11, 1)];
-  const next = cands.filter(d => d.getTime() > today.getTime()).sort((a, b) => a - b)[0];
-  const days = Math.max(1, Math.ceil((next.getTime() - today.getTime()) / 86400000));
-  return { days: days, date: fmtLocalDate(next.getTime()) };
+  const exam = new Date('2026-11-08T00:00:00');
+  const msPerDay = 86400000;
+  const diff = Math.max(0, Math.ceil((exam.getTime() - today.getTime()) / msPerDay));
+  const days = Math.max(1, diff - 1); // 不含考试日当天
+  return { days: days, gb: Math.min(days, 49), bb: Math.min(days * 2, 99), examDate: '2026-11-08' };
 }
 function renderPrice() {
   const p = calcPrice();
-  const elToday = document.getElementById('priceToday');
   const elDays = document.getElementById('priceDays');
-  const elPay = document.getElementById('payPrice');
-  if (elToday) elToday.textContent = p.days;
+  const elGb = document.getElementById('payGbPrice');
+  const elBb = document.getElementById('payBbPrice');
   if (elDays) elDays.textContent = p.days;
-  if (elPay) elPay.textContent = p.days;
+  if (elGb) elGb.textContent = p.gb;
+  if (elBb) elBb.textContent = p.bb;
 }
 function unlockExpiryOf(hit) {
-  /* 失效日期统一为每年 7 月 1 日 / 12 月 1 日，取该日 23:59:59 作为过期时刻 */
+  /* 失效日期统一为考试日 2026-11-08 当日 23:59:59 */
   const d = hit && hit[3];
   if (!d || typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return 0;
   const t = new Date(d + 'T23:59:59').getTime();
@@ -266,7 +270,7 @@ function unlockState() {
   if (!u || !u.hash || !u.group) return null;
   const hit = (PASSPORT.codes || []).find(c => c[0] === u.hash);
   if (!hit) return null;                          // 口令已被管理员撤回
-  const exp = unlockExpiryOf(hit);                // 每年 7/1、12/1 失效
+  const exp = unlockExpiryOf(hit);                // 考试日 2026-11-08 失效
   if (exp && Date.now() > exp) return null;       // 已过失效日
   return { hash: u.hash, group: u.group, type: hit[2] || '', exp: exp, at: u.at };
 }
@@ -288,7 +292,7 @@ function tryUnlock() {
   const h = sha256Hex(input);
   const hit = (PASSPORT.codes || []).find(c => c[0] === h);
   if (!hit) { showUnlockMsg('口令不正确，请检查大小写与连字符后重试', true); return; }
-  const exp = unlockExpiryOf(hit);                       // 每年 7/1、12/1 失效
+  const exp = unlockExpiryOf(hit);                       // 考试日 2026-11-08 失效
   if (exp && Date.now() > exp) { showUnlockMsg('该口令已于 ' + hit[3] + ' 失效，请购买或索取新口令', true); return; }
   lsSet(LS_UNLOCK, { hash: h, group: hit[1], type: hit[2] || '', exp: exp, at: Date.now() });
   closeUnlock();
@@ -321,7 +325,7 @@ function openUnlock() {
     document.getElementById('unlockStateBox').textContent = '当前状态：已解锁「' + u.group + '」' + (u.exp ? '，有效期至 ' + fmtLocalDate(u.exp) + '（剩 ' + remain + ' 天）' : '');
   }
   document.getElementById('unlockInput').value = '';
-  showUnlockMsg(u ? '如需更换口令，输入新口令后点按钮重新解锁。' : '口令可向管理员购买或索取；所有口令统一在每年 7 月 1 日 / 12 月 1 日失效。', false);
+  showUnlockMsg(u ? '如需更换口令，输入新口令后点按钮重新解锁。' : '口令可向管理员购买或索取；所有口令统一在考试日 2026-11-08 失效，过期后需重新购买。', false);
   renderPrice();
   document.getElementById('unlockMask').classList.add('show');
 }
