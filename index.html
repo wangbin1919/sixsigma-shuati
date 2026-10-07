@@ -78,12 +78,22 @@
   .u-btn.primary { background:var(--primary); color:#fff; }
   .u-btn.ghost { background:#EEE; color:var(--text); margin-top:8px; }
   .unlock-state { background:#E8F5E9; border-radius:10px; padding:10px 12px; font-size:13px; color:var(--ok); margin-bottom:12px; }
-  /* ===== 扫码付费窗口 ===== */
+  /* ===== 自动发卡购买入口 ===== */
   .pay-box { margin-top:14px; background:#fff; border:1.5px solid #E0E0E0; border-radius:12px; padding:14px; text-align:center; }
   .pay-price { font-size:16px; font-weight:700; color:var(--primary); margin-bottom:10px; }
   .pay-price span { font-size:22px; }
+  .pay-links { display:flex; gap:8px; margin:8px 0; flex-wrap:wrap; justify-content:center; }
+  .pay-link-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 16px; border-radius:10px; border:none; font-size:14px; font-weight:700; cursor:pointer; text-decoration:none; }
+  .pay-link-btn.green { background:var(--primary); color:#fff; }
+  .pay-link-btn.black { background:#263238; color:#fff; }
+  .pay-link-btn.full { background:var(--accent); color:#fff; }
+  .pay-link-btn:disabled, .pay-link-btn.off { background:#ccc; color:#666; cursor:not-allowed; }
   .pay-qr { width:180px; height:auto; border-radius:8px; display:block; margin:0 auto 8px; }
-  .pay-note { font-size:12px; color:var(--muted); line-height:1.5; }
+  .pay-note { font-size:12px; color:var(--muted); line-height:1.6; text-align:left; }
+  .pay-note li { margin:2px 0; }
+  .code-input-box { background:#f5f5f5; border-radius:10px; padding:12px; margin-top:12px; }
+  .code-input-box .title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:6px; }
+  .code-input-box .desc { font-size:12px; color:var(--muted); margin-bottom:8px; line-height:1.5; }
 
 </style>
 </head>
@@ -156,20 +166,34 @@
 <div class="mask" id="unlockMask">
   <div class="unlock-modal">
     <h3>🔓 解锁全题库</h3>
-    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。中质协考试日 <b>2026-11-08</b> 前有效（距考试剩 <b id="priceDays"></b> 天），扫码购买请联系管理员微信；朋友口令为管理员定向发放，勿外传。
+    <div class="u-desc" id="unlockHint">每日前 <b id="trialNum">15</b> 题免费体验；输入「付费口令」或「朋友口令」即可解锁黑带/绿带全部题目与解析。中质协考试日 <b>2026-11-08</b> 前有效（距考试剩 <b id="priceDays"></b> 天）。
       <div class="pay-box" id="payBox">
         <div class="pay-price" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
           <span>绿带 <b id="payGbPrice" style="font-size:20px; color:var(--accent);"></b> 元</span>
           <span>黑带 <b id="payBbPrice" style="font-size:20px; color:var(--accent);"></b> 元</span>
         </div>
         <div class="pay-formula" style="font-size:12px; color:var(--muted); margin:4px 0 8px;">绿带 = 剩余天数×1（封顶49） · 黑带 = 剩余天数×2（封顶99）</div>
-        <img class="pay-qr" src="img/wechat-qr.png" alt="微信支付收款码">
-        <div class="pay-note">支付后请截图发给管理员，换取本期口令</div>
+        <div class="pay-links" id="payLinks"></div>
+        <div class="pay-note">
+          <b>自动发卡流程：</b>
+          <ol>
+            <li>点击上方对应按钮，跳转自动发卡平台</li>
+            <li>扫码付款（支持微信 / 支付宝）</li>
+            <li>平台自动发送卡密（短信 / 页面展示）</li>
+            <li>复制卡密，回到本页下方输入框粘贴</li>
+            <li>点击「验证并解锁」即可使用，无需等待</li>
+          </ol>
+        </div>
+        <div class="code-input-box">
+          <div class="title">🔐 输入已购卡密</div>
+          <div class="desc">已在发卡平台完成购买并收到卡密？直接输入下方框中即可解锁全题库。</div>
+          <input class="unlock-input" id="unlockInput" type="text" placeholder="粘贴卡密，如 SS-XXXX-XXXX" autocomplete="off" style="margin-top:8px;">
+        </div>
       </div>
     </div>
     <div class="unlock-state" id="unlockStateBox" style="display:none;"></div>
     <input class="unlock-input" id="unlockInput" type="text" placeholder="输入口令，如 SS-XXXX-XXXX" autocomplete="off">
-    <div class="unlock-msg" id="unlockMsg">口令请向管理员购买或索取；口令统一在考试日 2026-11-08 失效，过期后需重新购买。</div>
+    <div class="unlock-msg" id="unlockMsg">购买后系统秒发卡密，输入即可解锁；口令统一在考试日 2026-11-08 失效，过期后需重新购买。</div>
     <button class="u-btn primary" onclick="tryUnlock()">验证并解锁</button>
     <button class="u-btn ghost" onclick="closeUnlock()">暂不解锁</button>
   </div>
@@ -257,6 +281,25 @@ function renderPrice() {
   if (elDays) elDays.textContent = p.days;
   if (elGb) elGb.textContent = p.gb;
   if (elBb) elBb.textContent = p.bb;
+  renderPayLinks(p.gb, p.bb);
+}
+function renderPayLinks(gbPrice, bbPrice) {
+  const box = document.getElementById('payLinks');
+  if (!box) return;
+  const links = (PASSPORT && PASSPORT.purchaseLinks) || {};
+  const items = [];
+  if (links.greenBelt) items.push({ url: links.greenBelt, label: '购买绿带题库', cls: 'green', price: gbPrice });
+  if (links.blackBelt) items.push({ url: links.blackBelt, label: '购买黑带题库', cls: 'black', price: bbPrice });
+  if (links.full) items.push({ url: links.full, label: '购买全题库', cls: 'full', price: (gbPrice || 0) + (bbPrice || 0) });
+  if (!items.length) {
+    box.innerHTML = '<span style="font-size:12px;color:var(--muted);">购买入口即将开放，敬请期待</span>';
+    return;
+  }
+  let html = '';
+  items.forEach(it => {
+    html += '<a class="pay-link-btn ' + it.cls + '" href="' + it.url + '" target="_blank" rel="noopener">' + it.label + (it.price ? '（' + it.price + '元）' : '') + '</a>';
+  });
+  box.innerHTML = html;
 }
 function unlockExpiryOf(hit) {
   /* 失效日期统一为考试日 2026-11-08 当日 23:59:59 */
